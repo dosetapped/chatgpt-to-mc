@@ -1,0 +1,48 @@
+{
+	"schemaVersion": 1,
+	"id": "chatgpt-to-mc-chat",
+	"version": "${version}",
+	"name": "ChatGPT To MC Chat",
+	"description": "A Fabric mod that lets you send chat prompts in Minecraft to ChatGPT and receive in-game responses.",
+	"authors": [
+	  "Me!"
+	],
+	"contact": {
+	  "homepage": "https://fabricmc.net/",
+	  "sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/chatgpt-to-mc-chat/icon.png",
+	"environment": "*",
+	"entrypoints": {
+	  "main": [
+	    "chatgpttomcchat.modid.ChatGPTToMCChat"
+	  ],
+	  "client": [
+	    "chatgpttomcchat.modid.ChatGPTToMCChatClient"
+	  ],
+	  "modmenu": [
+	    {
+	      "value": "chatgpttomcchat.modid.ChatGPTToMCChatModMenu",
+	      "environment": "client"
+	    }
+	  ]
+	},
+	"mixins": [
+	  "chatgpt-to-mc-chat.mixins.json",
+	  {
+		"config": "chatgpt-to-mc-chat.client.mixins.json",
+		"environment": "client"
+	  }
+	],
+	"depends": {
+	  "fabricloader": ">=0.18.4",
+	  "minecraft": "~1.21.11",
+	  "java": ">=21",
+	  "fabric-api": "*"
+	},
+	"suggests": {
+	  "modmenu": "*"
+	}
+  }
+  
