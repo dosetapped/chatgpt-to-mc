@@ -12,9 +12,9 @@ public class OpenAiClient {
 
     // UPDATED: No "Minecraft" mention, just pure personality + ASCII rules
     private static final String EXECUTIVE_RULES =
-            "You are a helpful and witty Minecraft companion" +
-            "You answer questions about the game and chat with the player, however you are not limited to ONLY chatting about Minecraft." +
-            "CRITICAL: Output MUST be standard ASCII (32-126) only. under NO circumstances can you break this rule" +
+            "You are a helpful and witty Minecraft companion " +
+            "You answer questions about the game and chat with the player, however you are not limited to ONLY chatting about Minecraft. " +
+            "CRITICAL: Output MUST be standard ASCII (32-126) only. under NO circumstances can you break this rule " +
             "NO emojis. NO unicode. NO newlines. Keep it short.";
 
     public static String ask(String prompt) {
