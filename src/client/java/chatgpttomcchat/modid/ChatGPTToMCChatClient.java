@@ -4,7 +4,6 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,40 +21,50 @@ public class ChatGPTToMCChatClient implements ClientModInitializer {
         ClientReceiveMessageEvents.CHAT.register((message, signedMessage, sender, params, receptionTimestamp) -> {
             if (!ModConfig.enabled) return;
 
-            String raw = message.getString();
-            if (raw == null || raw.isBlank()) return;
+            // 1. Get the sender's name safely from the chat parameters
+            // This works on servers regardless of ranks or prefixes
+            String senderName = "System";
+            if (params != null && params.name() != null) {
+                senderName = params.name().getString();
+            }
+            
+            if (!ModConfig.isPlayerAllowed(senderName)) return;
 
-            ParsedChat pc = parseChatLine(raw);
-            if (!ModConfig.isPlayerAllowed(pc.name)) return;
+            // 2. Extract the message content
+            // We search the full message string for our trigger phrase
+            String fullText = message.getString();
+            String lowerFull = fullText.toLowerCase(Locale.ROOT);
+            
+            int triggerIdx = lowerFull.indexOf(TRIGGER);
+            if (triggerIdx == -1) return;
 
-            String content = pc.content;
-            String lower = content.toLowerCase(Locale.ROOT);
-            if (!lower.trim().startsWith(TRIGGER)) return;
-
-            String prompt = content.substring(lower.indexOf(TRIGGER) + TRIGGER.length()).trim();
+            // 3. Extract the prompt (everything after "hey chatgpt")
+            String prompt = fullText.substring(triggerIdx + TRIGGER.length()).trim();
             if (prompt.isBlank()) {
                 showLocalNotice("Error: No prompt provided after 'Hey ChatGPT'.");
                 return;
             }
 
+            // 4. Handle Cooldown
             long now = System.currentTimeMillis();
             long cooldownMs = ModConfig.cooldownSeconds * 1000L;
-            Long last = lastUseByName.get(pc.name);
+            Long last = lastUseByName.get(senderName);
 
             if (last != null && now - last < cooldownMs) {
                 showLocalNotice("Cooldown: Wait " + ((cooldownMs - (now - last)) / 1000) + "s.");
                 return;
             }
-            lastUseByName.put(pc.name, now);
+            lastUseByName.put(senderName, now);
 
+            // 5. Async API Call
             CompletableFuture.runAsync(() -> {
                 String reply = OpenAiClient.ask(prompt);
-                
-                // If the reply starts with '(', it's an error from OpenAiClient
-                if (reply.startsWith("(")) {
-                    showLocalNotice("Connection Error: " + reply);
-                } else {
-                    sendChatAsYou(ModConfig.baritone ? reply : "ChatGPT: " + reply);
+                if (reply != null) {
+                    if (reply.startsWith("(")) {
+                        showLocalNotice("Connection Error: " + reply);
+                    } else {
+                        sendChatAsYou(ModConfig.baritone ? reply : "ChatGPT: " + reply);
+                    }
                 }
             });
         });
@@ -75,22 +84,5 @@ public class ChatGPTToMCChatClient implements ClientModInitializer {
         if (mc != null && mc.player != null) {
             mc.player.displayClientMessage(Component.literal("§7[ChatGPT] §f" + msg), false);
         }
-    }
-
-    private static ParsedChat parseChatLine(String raw) {
-        String r = raw.trim();
-        if (r.startsWith("<")) {
-            int end = r.indexOf('>');
-            if (end > 1) {
-                return new ParsedChat(r.substring(1, end).trim(), r.substring(end + 1).trim());
-            }
-        }
-        return new ParsedChat("player", r);
-    }
-
-    private static class ParsedChat {
-        final String name;
-        final String content;
-        ParsedChat(String n, String c) { this.name = n; this.content = c; }
     }
 }
