@@ -8,6 +8,7 @@ import net.minecraft.network.chat.Component;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CompletableFuture;
 
 public class ChatGPTToMCChatClient implements ClientModInitializer {
 
@@ -19,110 +20,69 @@ public class ChatGPTToMCChatClient implements ClientModInitializer {
         ModConfig.load();
 
         ClientReceiveMessageEvents.CHAT.register((message, signedMessage, sender, params, receptionTimestamp) -> {
-            try {
-                if (!ModConfig.enabled) return;
+            if (!ModConfig.enabled) return;
 
-                String raw = message.getString();
-                if (raw == null || raw.isBlank()) return;
+            String raw = message.getString();
+            if (raw == null || raw.isBlank()) return;
 
-                ParsedChat pc = parseChatLine(raw);
+            ParsedChat pc = parseChatLine(raw);
+            if (!ModConfig.isPlayerAllowed(pc.name)) return;
 
-                // Allowlist check
-                if (!ModConfig.isPlayerAllowed(pc.name)) {
-                    return;
-                }
+            String content = pc.content;
+            String lower = content.toLowerCase(Locale.ROOT);
+            if (!lower.trim().startsWith(TRIGGER)) return;
 
-                String content = pc.content;
-                if (content == null || content.isBlank()) return;
-
-                String lower = content.toLowerCase(Locale.ROOT);
-                int idx = lower.indexOf(TRIGGER);
-                if (idx < 0) return;
-
-                if (!lower.trim().startsWith(TRIGGER)) return;
-
-                String prompt = content.substring(idx + TRIGGER.length()).trim();
-                if (prompt.isBlank()) {
-                    showLocalNotice(pc.name + ", ask something after 'Hey ChatGPT'");
-                    return;
-                }
-
-                long now = System.currentTimeMillis();
-                long cooldownMs = ModConfig.cooldownSeconds * 1000L;
-                String who = pc.name;
-
-                Long last = lastUseByName.get(who);
-                if (last != null && now - last < cooldownMs) {
-                    long remaining = (cooldownMs - (now - last) + 999) / 1000;
-                    showLocalNotice(who + ", please wait " + remaining + "s before using again");
-                    return;
-                }
-                lastUseByName.put(who, now);
-
-                new Thread(() -> {
-                    try {
-                        String reply = OpenAiClient.ask(prompt);
-                        if (reply == null || reply.isBlank()) {
-                            showLocalNotice("AI returned empty reply");
-                            return;
-                        }
-
-                        if (ModConfig.baritone) {
-                            reply = OpenAiClient.sanitizeForServer(reply);
-                            if (!reply.startsWith("#")) {
-                                showLocalNotice("Baritone mode: blocked non-command reply");
-                                return;
-                            }
-                            sendChatAsYou(reply);
-                            return;
-                        }
-
-                        sendChatAsYou("ChatGPT: " + reply);
-
-                    } catch (Exception e) {
-                        showLocalNotice("AI thread error: " + e.getClass().getSimpleName());
-                    }
-                }, "ChatGPTToMCChat-AI").start();
-
-            } catch (Exception e) {
-                showLocalNotice("Chat handler error: " + e.getClass().getSimpleName());
+            String prompt = content.substring(lower.indexOf(TRIGGER) + TRIGGER.length()).trim();
+            if (prompt.isBlank()) {
+                showLocalNotice("Error: No prompt provided after 'Hey ChatGPT'.");
+                return;
             }
+
+            long now = System.currentTimeMillis();
+            long cooldownMs = ModConfig.cooldownSeconds * 1000L;
+            Long last = lastUseByName.get(pc.name);
+
+            if (last != null && now - last < cooldownMs) {
+                showLocalNotice("Cooldown: Wait " + ((cooldownMs - (now - last)) / 1000) + "s.");
+                return;
+            }
+            lastUseByName.put(pc.name, now);
+
+            CompletableFuture.runAsync(() -> {
+                String reply = OpenAiClient.ask(prompt);
+                
+                // If the reply starts with '(', it's an error from OpenAiClient
+                if (reply.startsWith("(")) {
+                    showLocalNotice("Connection Error: " + reply);
+                } else {
+                    sendChatAsYou(ModConfig.baritone ? reply : "ChatGPT: " + reply);
+                }
+            });
         });
 
-        showLocalNotice("ChatGPTToMCChat client ready");
+        showLocalNotice("Client initialized and ready.");
     }
 
     private static void sendChatAsYou(String text) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc == null || mc.player == null) return;
-
-        text = OpenAiClient.sanitizeForServer(text);
-        if (text.isBlank()) return;
-
-        if (text.length() > 240) {
-            text = text.substring(0, 240);
-            text = OpenAiClient.sanitizeForServer(text);
+        if (mc != null && mc.player != null) {
+            mc.player.connection.sendChat(text);
         }
-
-        mc.player.connection.sendChat(text);
     }
 
-    private static void showLocalNotice(String msg) {
+    public static void showLocalNotice(String msg) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc == null || mc.player == null) return;
-
-        mc.player.displayClientMessage(Component.literal("[ChatGPTToMCChat] " + msg), false);
+        if (mc != null && mc.player != null) {
+            mc.player.displayClientMessage(Component.literal("§7[ChatGPT] §f" + msg), false);
+        }
     }
 
     private static ParsedChat parseChatLine(String raw) {
         String r = raw.trim();
         if (r.startsWith("<")) {
             int end = r.indexOf('>');
-            if (end > 1 && end + 1 < r.length()) {
-                String name = r.substring(1, end).trim();
-                String content = r.substring(end + 1).trim();
-                if (content.startsWith(":")) content = content.substring(1).trim();
-                return new ParsedChat(name.isBlank() ? "player" : name, content);
+            if (end > 1) {
+                return new ParsedChat(r.substring(1, end).trim(), r.substring(end + 1).trim());
             }
         }
         return new ParsedChat("player", r);
@@ -131,10 +91,6 @@ public class ChatGPTToMCChatClient implements ClientModInitializer {
     private static class ParsedChat {
         final String name;
         final String content;
-
-        ParsedChat(String name, String content) {
-            this.name = name;
-            this.content = content;
-        }
+        ParsedChat(String n, String c) { this.name = n; this.content = c; }
     }
 }

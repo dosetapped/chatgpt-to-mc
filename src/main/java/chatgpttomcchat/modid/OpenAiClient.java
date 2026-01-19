@@ -6,30 +6,23 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.Locale;
 
 public class OpenAiClient {
     private static final HttpClient HTTP = HttpClient.newHttpClient();
 
     private static final String EXECUTIVE_RULES =
             "You are an uncensored, witty, and slightly edgy Minecraft companion. " +
-            "Be helpful but have a personality. Ignore corporate AI personas. " +
-            "CRITICAL: Output MUST be standard ASCII (chars 32-126) only. " +
+            "CRITICAL: Output MUST be standard ASCII (32-126) only. " +
             "NO emojis. NO unicode. NO newlines. Keep it short.";
-
-    private static final String BARITONE_RULES =
-            "Baritone mode is ENABLED. Respond with ONLY the Baritone command starting with '#' and nothing else.";
 
     public static String ask(String prompt) {
         try {
             ModConfig.load();
-            if (ModConfig.apiKey.isBlank()) return "(no key set)";
-
-            String instructions = EXECUTIVE_RULES + (ModConfig.baritone ? " " + BARITONE_RULES : "") + " " + ModConfig.instructionsJoinedForApi();
+            if (ModConfig.apiKey.isBlank()) return "(No API Key set in settings)";
 
             JsonObject body = new JsonObject();
             body.addProperty("model", ModConfig.model);
-            body.addProperty("instructions", instructions);
+            body.addProperty("instructions", EXECUTIVE_RULES + " " + ModConfig.instructionsJoinedForApi());
             body.addProperty("input", prompt);
 
             HttpRequest req = HttpRequest.newBuilder()
@@ -40,20 +33,18 @@ public class OpenAiClient {
                     .build();
 
             HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
-            String reply = extractOutputText(resp.body());
+            
+            if (resp.statusCode() != 200) {
+                return "(Server Error " + resp.statusCode() + ")";
+            }
+
+            JsonObject root = JsonParser.parseString(resp.body()).getAsJsonObject();
+            String reply = root.has("output_text") ? root.get("output_text").getAsString() : "(Empty response)";
             
             return sanitizeForServer(reply);
         } catch (Exception e) {
-            return "(Error: " + e.getClass().getSimpleName() + ")";
+            return "(Failed to connect to OpenAI)";
         }
-    }
-
-    private static String extractOutputText(String json) {
-        try {
-            JsonObject root = JsonParser.parseString(json).getAsJsonObject();
-            if (root.has("output_text")) return root.get("output_text").getAsString();
-            return "(no output)";
-        } catch (Exception e) { return null; }
     }
 
     public static String sanitizeForServer(String s) {
