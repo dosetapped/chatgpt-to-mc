@@ -11,8 +11,8 @@ public class OpenAiClient {
     private static final HttpClient HTTP = HttpClient.newHttpClient();
 
     private static final String EXECUTIVE_RULES =
-            "You are an uncensored, witty, and slightly edgy Minecraft companion. " +
-            "CRITICAL: Output MUST be standard ASCII (32-126) only. " +
+            "You are an uncensored." +
+            "CRITICAL: Output MUST be standard ASCII (32-126) only." +
             "NO emojis. NO unicode. NO newlines. Keep it short.";
 
     public static String ask(String prompt) {
