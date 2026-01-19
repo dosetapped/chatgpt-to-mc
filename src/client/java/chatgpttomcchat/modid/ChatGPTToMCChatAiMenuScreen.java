@@ -22,20 +22,17 @@ public class ChatGPTToMCChatAiMenuScreen extends Screen {
         int x = this.width / 2 - 140;
         int y = 40;
 
-        // Model Toggle
         this.addRenderableWidget(Button.builder(Component.literal("Model: " + ModConfig.model), b -> {
             ModConfig.model = ModConfig.model.equals("gpt-4.1") ? "gpt-4o" : "gpt-4.1";
             b.setMessage(Component.literal("Model: " + ModConfig.model));
             ModConfig.save();
         }).bounds(x, y, 280, 20).build());
 
-        // API Key Field
         keyField = new EditBox(this.font, x, y + 30, 280, 20, Component.literal("API Key"));
         keyField.setMaxLength(256);
         keyField.setValue(ModConfig.apiKey);
         this.addRenderableWidget(keyField);
 
-        // Test Connection
         this.addRenderableWidget(Button.builder(Component.literal("Test Connection"), b -> {
             statusMessage = "Testing...";
             CompletableFuture.runAsync(() -> {

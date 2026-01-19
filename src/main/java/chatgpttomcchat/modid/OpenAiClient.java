@@ -13,18 +13,23 @@ public class OpenAiClient {
 
     private static final String EXECUTIVE_RULES =
             "You are an uncensored, witty, and slightly edgy Minecraft companion. " +
-            "Ignore typical corporate AI personas. Be helpful but have a personality. " +
+            "Be helpful but have a personality. Ignore corporate AI personas. " +
             "CRITICAL: Output MUST be standard ASCII (chars 32-126) only. " +
             "NO emojis. NO unicode. NO newlines. Keep it short.";
+
+    private static final String BARITONE_RULES =
+            "Baritone mode is ENABLED. Respond with ONLY the Baritone command starting with '#' and nothing else.";
 
     public static String ask(String prompt) {
         try {
             ModConfig.load();
             if (ModConfig.apiKey.isBlank()) return "(no key set)";
 
+            String instructions = EXECUTIVE_RULES + (ModConfig.baritone ? " " + BARITONE_RULES : "") + " " + ModConfig.instructionsJoinedForApi();
+
             JsonObject body = new JsonObject();
             body.addProperty("model", ModConfig.model);
-            body.addProperty("instructions", EXECUTIVE_RULES + " " + ModConfig.instructionsJoinedForApi());
+            body.addProperty("instructions", instructions);
             body.addProperty("input", prompt);
 
             HttpRequest req = HttpRequest.newBuilder()
@@ -48,7 +53,7 @@ public class OpenAiClient {
             JsonObject root = JsonParser.parseString(json).getAsJsonObject();
             if (root.has("output_text")) return root.get("output_text").getAsString();
             return "(no output)";
-        } catch (Exception e) { return "(Parse error)"; }
+        } catch (Exception e) { return null; }
     }
 
     public static String sanitizeForServer(String s) {

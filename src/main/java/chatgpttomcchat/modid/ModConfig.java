@@ -29,8 +29,7 @@ public class ModConfig {
     public static void load() {
         Properties props = new Properties();
         Path path = configPath();
-        
-        apiKey = ""; // Safety: Keep default empty
+        apiKey = ""; 
         model = "gpt-4.1";
 
         if (Files.exists(path)) {
@@ -90,8 +89,7 @@ public class ModConfig {
     public static boolean isPlayerAllowed(String name) {
         if (!allowlistEnabled) return true;
         String n = normalizeName(name);
-        if (n.isBlank() || allowedPlayers.isEmpty()) return false;
-        return allowedPlayers.stream().anyMatch(p -> p.equalsIgnoreCase(n));
+        return !n.isBlank() && allowedPlayers.stream().anyMatch(p -> p.equalsIgnoreCase(n));
     }
 
     public static void addAllowedPlayer(String name) {
