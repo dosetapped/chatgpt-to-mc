@@ -5,7 +5,7 @@
 	"name": "ChatGPT To MC Chat",
 	"description": "A Fabric mod that lets you send chat prompts in Minecraft to ChatGPT and receive in-game responses.",
 	"authors": [
-	  "Me!"
+	  "dosetap"
 	],
 	"contact": {
 	  "homepage": "https://fabricmc.net/",
