@@ -10,38 +10,35 @@ import java.nio.charset.StandardCharsets;
 public class OpenAiClient {
     private static final HttpClient HTTP = HttpClient.newHttpClient();
 
-    // UPDATED: No "Minecraft" mention, just pure personality + ASCII rules
     private static final String EXECUTIVE_RULES =
-            "You are a helpful and witty Minecraft companion " +
+            "You are a helpful and witty Minecraft companion. " +
             "You answer questions about the game and chat with the player, however you are not limited to ONLY chatting about Minecraft. " +
-            "CRITICAL: Output MUST be standard ASCII (32-126) only. under NO circumstances can you break this rule " +
+            "CRITICAL: Output MUST be standard ASCII (32-126) only. Under NO circumstances can you break this rule. " +
             "NO emojis. NO unicode. NO newlines. Keep it short.";
 
-    public static String ask(String prompt) {
+    public static String ask(String prompt, String context) {
         try {
             ModConfig.load();
             if (ModConfig.apiKey.isBlank()) return "(No API Key set)";
 
-            // 1. Validate Model Name (Auto-fix invalid "gpt-4.1" to "gpt-4o")
             String modelToUse = ModConfig.model;
             if ("gpt-4.1".equals(modelToUse)) {
                 modelToUse = "gpt-4o"; 
             }
 
-            // 2. Build the modern "Chat" JSON payload
             JsonObject body = new JsonObject();
             body.addProperty("model", modelToUse);
 
             JsonArray messages = new JsonArray();
             
-            // System Instruction
             JsonObject systemMsg = new JsonObject();
             systemMsg.addProperty("role", "system");
-            // We combine the Executive Rules with any custom user instructions
-            systemMsg.addProperty("content", EXECUTIVE_RULES + " " + ModConfig.instructionsJoinedForApi());
+            String fullInstructions = EXECUTIVE_RULES + " " + 
+                                      ModConfig.instructionsJoinedForApi() + 
+                                      " [LIVE PLAYER CONTEXT: " + context + "]";
+            systemMsg.addProperty("content", fullInstructions);
             messages.add(systemMsg);
 
-            // User Prompt
             JsonObject userMsg = new JsonObject();
             userMsg.addProperty("role", "user");
             userMsg.addProperty("content", prompt);
@@ -49,7 +46,6 @@ public class OpenAiClient {
 
             body.add("messages", messages);
 
-            // 3. Send Request
             HttpRequest req = HttpRequest.newBuilder()
                     .uri(URI.create("https://api.openai.com/v1/chat/completions"))
                     .header("Authorization", "Bearer " + ModConfig.apiKey.trim())
@@ -59,7 +55,6 @@ public class OpenAiClient {
 
             HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
 
-            // 4. Handle Errors
             if (resp.statusCode() != 200) {
                 try {
                     JsonObject errRoot = JsonParser.parseString(resp.body()).getAsJsonObject();
@@ -70,7 +65,6 @@ public class OpenAiClient {
                 return "(Server Error " + resp.statusCode() + ")";
             }
 
-            // 5. Parse Response
             JsonObject root = JsonParser.parseString(resp.body()).getAsJsonObject();
             if (root.has("choices")) {
                 JsonArray choices = root.getAsJsonArray("choices");

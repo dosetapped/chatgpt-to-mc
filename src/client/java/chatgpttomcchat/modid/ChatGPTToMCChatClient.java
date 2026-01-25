@@ -22,7 +22,6 @@ public class ChatGPTToMCChatClient implements ClientModInitializer {
             if (!ModConfig.enabled) return;
 
             // 1. Get the sender's name safely from the chat parameters
-            // This works on servers regardless of ranks or prefixes
             String senderName = "System";
             if (params != null && params.name() != null) {
                 senderName = params.name().getString();
@@ -31,7 +30,6 @@ public class ChatGPTToMCChatClient implements ClientModInitializer {
             if (!ModConfig.isPlayerAllowed(senderName)) return;
 
             // 2. Extract the message content
-            // We search the full message string for our trigger phrase
             String fullText = message.getString();
             String lowerFull = fullText.toLowerCase(Locale.ROOT);
             
@@ -56,9 +54,23 @@ public class ChatGPTToMCChatClient implements ClientModInitializer {
             }
             lastUseByName.put(senderName, now);
 
-            // 5. Async API Call
+            // 5. Gather Context and Call AI
             CompletableFuture.runAsync(() -> {
-                String reply = OpenAiClient.ask(prompt);
+                String context = "Unknown Location";
+                Minecraft mc = Minecraft.getInstance();
+                
+                if (mc.player != null && mc.level != null) {
+                    int x = (int) mc.player.getX();
+                    int y = (int) mc.player.getY();
+                    int z = (int) mc.player.getZ();
+                    
+                    // Get biome name (e.g., minecraft:plains)
+                    String biome = mc.level.getBiome(mc.player.blockPosition()).getRegisteredName();
+                    context = String.format("Coordinates: X=%d, Y=%d, Z=%d | Biome: %s", x, y, z, biome);
+                }
+
+                String reply = OpenAiClient.ask(prompt, context);
+                
                 if (reply != null) {
                     if (reply.startsWith("(")) {
                         showLocalNotice("Connection Error: " + reply);

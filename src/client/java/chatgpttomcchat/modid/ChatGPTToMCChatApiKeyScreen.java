@@ -20,7 +20,6 @@ public class ChatGPTToMCChatApiKeyScreen extends Screen {
 
     @Override
     protected void init() {
-        // Ensure width and height are available
         int x = this.width / 2 - 140;
         int w = 280;
         int y = 60;
@@ -36,12 +35,12 @@ public class ChatGPTToMCChatApiKeyScreen extends Screen {
             this.statusMessage = "Testing...";
             this.statusColor = 0xFFFF00;
             
-            // Run in a background thread so the game doesn't freeze during the API call
+            // Run in a background thread so the game doesn't freeze
             CompletableFuture.supplyAsync(() -> {
                 ModConfig.apiKey = keyField.getValue();
-                return OpenAiClient.ask("test");
+                // PASSING "API Test" AS CONTEXT to satisfy the new signature
+                return OpenAiClient.ask("test", "API Test");
             }).thenAccept(result -> {
-                // Update UI on the main thread
                 if (this.minecraft != null) {
                     this.minecraft.execute(() -> {
                         if (result.contains("error") || result.contains("exception") || result.contains("no apiKey set")) {
@@ -68,7 +67,6 @@ public class ChatGPTToMCChatApiKeyScreen extends Screen {
     public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
         int x = this.width / 2 - 140;
-        // Drawing the labels
         context.drawString(this.font, "Enter OpenAI API Key:", x, 48, 0xFFFFFF);
         context.drawCenteredString(this.font, statusMessage, this.width / 2, 110, statusColor);
     }

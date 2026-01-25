@@ -37,7 +37,8 @@ public class ChatGPTToMCChatAiMenuScreen extends Screen {
             statusMessage = "Testing...";
             CompletableFuture.runAsync(() -> {
                 ModConfig.apiKey = keyField.getValue();
-                String result = OpenAiClient.ask("Are you there?");
+                // PASSING "API Test" AS CONTEXT
+                String result = OpenAiClient.ask("Are you there?", "API Test");
                 statusMessage = result.contains("Error") ? "FAILED" : "SUCCESS!";
             });
         }).bounds(x, y + 55, 280, 20).build());
