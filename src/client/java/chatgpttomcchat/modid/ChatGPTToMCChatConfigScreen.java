@@ -36,18 +36,25 @@ public class ChatGPTToMCChatConfigScreen extends Screen {
             b.setMessage(labelBaritone());
             ModConfig.save();
         }).bounds(x, y + row * 2, w, 20).build());
+        
+        // NEW BUTTON
+        this.addRenderableWidget(Button.builder(labelContext(), b -> {
+            ModConfig.contextAwareness = !ModConfig.contextAwareness;
+            b.setMessage(labelContext());
+            ModConfig.save();
+        }).bounds(x, y + row * 3, w, 20).build());
 
-        this.addRenderableWidget(new IntSlider(x, y + row * 3, w, 20, "Cooldown (s): ", 0, 60, ModConfig.cooldownSeconds, v -> { ModConfig.cooldownSeconds = v; ModConfig.save(); }));
-        this.addRenderableWidget(new IntSlider(x, y + row * 4, w, 20, "Max prompt chars: ", 50, 4000, ModConfig.maxPromptChars, v -> { ModConfig.maxPromptChars = v; ModConfig.save(); }));
-        this.addRenderableWidget(new IntSlider(x, y + row * 5, w, 20, "Max reply chars: ", 50, 500, ModConfig.maxReplyChars, v -> { ModConfig.maxReplyChars = v; ModConfig.save(); }));
+        this.addRenderableWidget(new IntSlider(x, y + row * 4, w, 20, "Cooldown (s): ", 0, 60, ModConfig.cooldownSeconds, v -> { ModConfig.cooldownSeconds = v; ModConfig.save(); }));
+        this.addRenderableWidget(new IntSlider(x, y + row * 5, w, 20, "Max prompt chars: ", 50, 4000, ModConfig.maxPromptChars, v -> { ModConfig.maxPromptChars = v; ModConfig.save(); }));
+        this.addRenderableWidget(new IntSlider(x, y + row * 6, w, 20, "Max reply chars: ", 50, 500, ModConfig.maxReplyChars, v -> { ModConfig.maxReplyChars = v; ModConfig.save(); }));
 
         this.addRenderableWidget(Button.builder(Component.literal("Edit instructions..."), b -> {
             if (this.minecraft != null) this.minecraft.setScreen(new ChatGPTToMCChatInstructionsListScreen(this, 0));
-        }).bounds(x, y + row * 7, w, 20).build());
+        }).bounds(x, y + row * 8, w, 20).build());
 
         this.addRenderableWidget(Button.builder(Component.literal("Allowed players..."), b -> {
             if (this.minecraft != null) this.minecraft.setScreen(new ChatGPTToMCChatAllowedPlayersScreen(this, 0));
-        }).bounds(x, y + row * 8, w, 20).build());
+        }).bounds(x, y + row * 9, w, 20).build());
 
         this.addRenderableWidget(Button.builder(Component.literal("Done"), b -> {
             ModConfig.save();
@@ -57,6 +64,7 @@ public class ChatGPTToMCChatConfigScreen extends Screen {
 
     private Component labelEnabled() { return Component.literal("Mod Enabled: " + (ModConfig.enabled ? "ON" : "OFF")); }
     private Component labelBaritone() { return Component.literal("Baritone mode: " + (ModConfig.baritone ? "ON" : "OFF")); }
+    private Component labelContext() { return Component.literal("Context (Coords): " + (ModConfig.contextAwareness ? "ON" : "OFF")); }
 
     private static class IntSlider extends AbstractSliderButton {
         private final String prefix; private final int min; private final int max; private final java.util.function.IntConsumer onChange;

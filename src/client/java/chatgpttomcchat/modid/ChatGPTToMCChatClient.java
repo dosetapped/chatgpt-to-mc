@@ -21,7 +21,6 @@ public class ChatGPTToMCChatClient implements ClientModInitializer {
         ClientReceiveMessageEvents.CHAT.register((message, signedMessage, sender, params, receptionTimestamp) -> {
             if (!ModConfig.enabled) return;
 
-            // 1. Get the sender's name safely from the chat parameters
             String senderName = "System";
             if (params != null && params.name() != null) {
                 senderName = params.name().getString();
@@ -29,21 +28,18 @@ public class ChatGPTToMCChatClient implements ClientModInitializer {
             
             if (!ModConfig.isPlayerAllowed(senderName)) return;
 
-            // 2. Extract the message content
             String fullText = message.getString();
             String lowerFull = fullText.toLowerCase(Locale.ROOT);
             
             int triggerIdx = lowerFull.indexOf(TRIGGER);
             if (triggerIdx == -1) return;
 
-            // 3. Extract the prompt (everything after "hey chatgpt")
             String prompt = fullText.substring(triggerIdx + TRIGGER.length()).trim();
             if (prompt.isBlank()) {
                 showLocalNotice("Error: No prompt provided after 'Hey ChatGPT'.");
                 return;
             }
 
-            // 4. Handle Cooldown
             long now = System.currentTimeMillis();
             long cooldownMs = ModConfig.cooldownSeconds * 1000L;
             Long last = lastUseByName.get(senderName);
@@ -54,17 +50,15 @@ public class ChatGPTToMCChatClient implements ClientModInitializer {
             }
             lastUseByName.put(senderName, now);
 
-            // 5. Gather Context and Call AI
             CompletableFuture.runAsync(() -> {
-                String context = "Unknown Location";
+                String context = "No Location Context";
                 Minecraft mc = Minecraft.getInstance();
                 
-                if (mc.player != null && mc.level != null) {
+                // Only send coordinates if the toggle is ON
+                if (ModConfig.contextAwareness && mc.player != null && mc.level != null) {
                     int x = (int) mc.player.getX();
                     int y = (int) mc.player.getY();
                     int z = (int) mc.player.getZ();
-                    
-                    // Get biome name (e.g., minecraft:plains)
                     String biome = mc.level.getBiome(mc.player.blockPosition()).getRegisteredName();
                     context = String.format("Coordinates: X=%d, Y=%d, Z=%d | Biome: %s", x, y, z, biome);
                 }

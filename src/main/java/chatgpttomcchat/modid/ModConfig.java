@@ -16,10 +16,11 @@ public class ModConfig {
     // Toggles
     public static boolean enabled = true;
     public static boolean baritone = false;
+    public static boolean contextAwareness = true; // NEW TOGGLE
 
     // Allowlist
     public static boolean allowlistEnabled = false;
-    public static final List<String> allowedPlayers = new ArrayList<>(); // stored as plain names
+    public static final List<String> allowedPlayers = new ArrayList<>();
 
     // OpenAI
     public static String apiKey = "";
@@ -30,7 +31,7 @@ public class ModConfig {
     public static int maxPromptChars = 600;
     public static int maxReplyChars = 240;
 
-    // Instructions list (user-editable)
+    // Instructions list
     public static final List<String> userInstructionsList = new ArrayList<>();
 
     private static Path configPath() {
@@ -44,6 +45,7 @@ public class ModConfig {
         // Defaults
         enabled = true;
         baritone = false;
+        contextAwareness = true;
         allowlistEnabled = false;
         allowedPlayers.clear();
 
@@ -51,7 +53,7 @@ public class ModConfig {
         maxPromptChars = 600;
         maxReplyChars = 240;
 
-        apiKey = ""; // Security: Start empty so we don't leak anything
+        apiKey = "";
         model = "gpt-4.1";
 
         userInstructionsList.clear();
@@ -67,6 +69,7 @@ public class ModConfig {
 
         enabled = Boolean.parseBoolean(props.getProperty("enabled", String.valueOf(enabled)));
         baritone = Boolean.parseBoolean(props.getProperty("baritone", String.valueOf(baritone)));
+        contextAwareness = Boolean.parseBoolean(props.getProperty("contextAwareness", String.valueOf(contextAwareness)));
         allowlistEnabled = Boolean.parseBoolean(props.getProperty("allowlistEnabled", String.valueOf(allowlistEnabled)));
 
         cooldownSeconds = parseInt(props.getProperty("cooldownSeconds"), cooldownSeconds);
@@ -76,7 +79,6 @@ public class ModConfig {
         apiKey = props.getProperty("apiKey", apiKey);
         model = props.getProperty("model", model);
 
-        // allowedPlayers stored as comma-separated
         String allowed = props.getProperty("allowedPlayers", "");
         allowedPlayers.clear();
         if (!allowed.isBlank()) {
@@ -86,7 +88,6 @@ public class ModConfig {
             }
         }
 
-        // instructions stored as ||-separated (so commas don’t break it)
         String inst = props.getProperty("userInstructionsList", "");
         if (!inst.isBlank()) {
             userInstructionsList.clear();
@@ -99,13 +100,14 @@ public class ModConfig {
             }
         }
 
-        save(); // make sure new keys appear
+        save();
     }
 
     public static void save() {
         Properties props = new Properties();
         props.setProperty("enabled", String.valueOf(enabled));
         props.setProperty("baritone", String.valueOf(baritone));
+        props.setProperty("contextAwareness", String.valueOf(contextAwareness));
 
         props.setProperty("allowlistEnabled", String.valueOf(allowlistEnabled));
         props.setProperty("allowedPlayers", String.join(",", allowedPlayers));
@@ -134,10 +136,7 @@ public class ModConfig {
         if (name == null) return false;
         String n = normalizeName(name);
         if (n.isBlank()) return false;
-
-        // if enabled but list empty -> allow nobody
         if (allowedPlayers.isEmpty()) return false;
-
         for (String a : allowedPlayers) {
             if (a.equalsIgnoreCase(n)) return true;
         }
@@ -172,7 +171,6 @@ public class ModConfig {
     }
 
     public static String instructionsJoinedForApi() {
-        // join as one string (no newlines)
         StringBuilder sb = new StringBuilder();
         for (String s : userInstructionsList) {
             if (s == null) continue;
