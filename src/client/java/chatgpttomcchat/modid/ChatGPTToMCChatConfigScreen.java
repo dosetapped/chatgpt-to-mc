@@ -1,15 +1,12 @@
 package chatgpttomcchat.modid;
 
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 public class ChatGPTToMCChatConfigScreen extends Screen {
     private final Screen parent;
-
-    private Button creditsButton;
 
     public ChatGPTToMCChatConfigScreen(Screen parent) {
         super(Component.literal("ChatGPT To MC Chat"));
@@ -20,94 +17,64 @@ public class ChatGPTToMCChatConfigScreen extends Screen {
     protected void init() {
         ModConfig.load();
         
-        int w = 280; 
-        int h = 20;  
-        int p = 4;   
-        int x = this.width / 2 - (w / 2); 
+        int w = 310; // Total width of our button block
+        int btnW = 150; // Width of the split buttons
+        int h = 20;     // Button height
+        int p = 10;     // Padding between rows (more space is cleaner)
         
-        // Calculate dynamic centering to prevent overlap
-        int totalContentHeight = (h + p) * 11 + 10; 
-        int y = (this.height - totalContentHeight) / 2;
+        int xCenter = this.width / 2;
+        int y = this.height / 4 + 20; // Start 1/4th down the screen
 
-        // --- CREDITS BUTTON ---
-        int btnSize = 20;
-        this.creditsButton = Button.builder(Component.literal("ℹ"), b -> {
+        // --- 1. CREDITS BUTTON (Top Right) ---
+        int credSize = 20;
+        this.addRenderableWidget(Button.builder(Component.literal("ℹ"), b -> {
             if (this.minecraft != null) this.minecraft.setScreen(new ChatGPTToMCChatCreditsScreen(this));
-        }).bounds(this.width - btnSize - 10, 10, btnSize, btnSize).build();
+        }).bounds(this.width - credSize - 10, 10, credSize, credSize).build());
 
-        this.addRenderableWidget(this.creditsButton);
+        // --- 2. TITLE (Visual only, rendered later) ---
 
-        // --- MAIN MENU ---
-        this.addRenderableWidget(Button.builder(Component.literal("AI Settings..."), b -> {
-            if (this.minecraft != null) this.minecraft.setScreen(new ChatGPTToMCChatAiMenuScreen(this));
-        }).bounds(x, y, w, h).build());
-        y += h + p;
-
+        // --- 3. MAIN TOGGLE (Full Width) ---
         this.addRenderableWidget(Button.builder(labelEnabled(), b -> {
             ModConfig.enabled = !ModConfig.enabled;
             b.setMessage(labelEnabled());
             ModConfig.save();
-        }).bounds(x, y, w, h).build());
+        }).bounds(xCenter - (w / 2), y, w, h).build());
         y += h + p;
 
-        this.addRenderableWidget(Button.builder(labelBaritone(), b -> {
-            ModConfig.baritone = !ModConfig.baritone;
-            b.setMessage(labelBaritone());
-            ModConfig.save();
-        }).bounds(x, y, w, h).build());
-        y += h + p;
-
-        this.addRenderableWidget(Button.builder(labelContext(), b -> {
-            ModConfig.contextAwareness = !ModConfig.contextAwareness;
-            b.setMessage(labelContext());
-            ModConfig.save();
-        }).bounds(x, y, w, h).build());
-        y += h + p;
-
-        this.addRenderableWidget(new IntSlider(x, y, w, h, "Cooldown (s): ", 0, 60, ModConfig.cooldownSeconds, v -> { ModConfig.cooldownSeconds = v; ModConfig.save(); }));
-        y += h + p;
+        // --- 4. CATEGORY GRID (2x2 Buttons) ---
         
-        this.addRenderableWidget(new IntSlider(x, y, w, h, "Max prompt chars: ", 50, 4000, ModConfig.maxPromptChars, v -> { ModConfig.maxPromptChars = v; ModConfig.save(); }));
-        y += h + p;
-        
-        this.addRenderableWidget(new IntSlider(x, y, w, h, "Max reply chars: ", 50, 500, ModConfig.maxReplyChars, v -> { ModConfig.maxReplyChars = v; ModConfig.save(); }));
+        // Row A: AI Settings & Gameplay Settings
+        this.addRenderableWidget(Button.builder(Component.literal("AI Configuration..."), b -> {
+            if (this.minecraft != null) this.minecraft.setScreen(new ChatGPTToMCChatAiMenuScreen(this));
+        }).bounds(xCenter - (w / 2), y, btnW, h).build());
+
+        this.addRenderableWidget(Button.builder(Component.literal("Gameplay & Limits..."), b -> {
+            if (this.minecraft != null) this.minecraft.setScreen(new ChatGPTToMCChatGameplayScreen(this));
+        }).bounds(xCenter - (w / 2) + btnW + 10, y, btnW, h).build());
         y += h + p;
 
-        y += 10; 
-
-        this.addRenderableWidget(Button.builder(Component.literal("Edit instructions..."), b -> {
+        // Row B: Instructions & Permissions
+        this.addRenderableWidget(Button.builder(Component.literal("Edit Instructions..."), b -> {
             if (this.minecraft != null) this.minecraft.setScreen(new ChatGPTToMCChatInstructionsListScreen(this, 0));
-        }).bounds(x, y, w, h).build());
-        y += h + p;
+        }).bounds(xCenter - (w / 2), y, btnW, h).build());
 
-        this.addRenderableWidget(Button.builder(Component.literal("Allowed players..."), b -> {
+        this.addRenderableWidget(Button.builder(Component.literal("Allowed Players..."), b -> {
             if (this.minecraft != null) this.minecraft.setScreen(new ChatGPTToMCChatAllowedPlayersScreen(this, 0));
-        }).bounds(x, y, w, h).build());
-        y += h + p;
+        }).bounds(xCenter - (w / 2) + btnW + 10, y, btnW, h).build());
+        y += h + p * 2; // Extra gap before "Done"
 
+        // --- 5. DONE BUTTON ---
         this.addRenderableWidget(Button.builder(Component.literal("Done"), b -> {
             ModConfig.save();
             if (this.minecraft != null) this.minecraft.setScreen(parent);
-        }).bounds(x, y, w, h).build());
+        }).bounds(xCenter - (w / 2), y, w, h).build());
     }
 
     @Override
     public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
-        // Credits button now uses text (ℹ) instead of texture
+        context.drawCenteredString(this.font, this.title, this.width / 2, 40, 0xFFFFFF);
     }
 
     private Component labelEnabled() { return Component.literal("Mod Enabled: " + (ModConfig.enabled ? "ON" : "OFF")); }
-    private Component labelBaritone() { return Component.literal("Baritone mode: " + (ModConfig.baritone ? "ON" : "OFF")); }
-    private Component labelContext() { return Component.literal("Context (Coords): " + (ModConfig.contextAwareness ? "ON" : "OFF")); }
-
-    private static class IntSlider extends AbstractSliderButton {
-        private final String prefix; private final int min; private final int max; private final java.util.function.IntConsumer onChange;
-        public IntSlider(int x, int y, int w, int h, String p, int min, int max, int init, java.util.function.IntConsumer c) {
-            super(x, y, w, h, Component.empty(), 0.0); this.prefix = p; this.min = min; this.max = max; this.onChange = c;
-            this.value = (Math.max(min, Math.min(max, init)) - min) / (double) (max - min); updateMessage();
-        }
-        @Override protected void updateMessage() { this.setMessage(Component.literal(prefix + (min + (int) Math.round(this.value * (max - min))))); }
-        @Override protected void applyValue() { onChange.accept(min + (int) Math.round(this.value * (max - min))); updateMessage(); }
-    }
 }
