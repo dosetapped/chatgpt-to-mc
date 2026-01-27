@@ -50,7 +50,7 @@ public class ChatGPTToMCChatCreditsScreen extends Screen {
 
         // Content
         context.drawCenteredString(this.font, Component.literal("Mod by: dosetap"), center, 70, green);
-        context.drawCenteredString(this.font, Component.literal("Version: beta-1.1.0"), center, 90, white);
+        context.drawCenteredString(this.font, Component.literal("Version 1.0.0"), center, 90, white);
         
         context.drawCenteredString(this.font, Component.literal("Thanks for playing!"), center, 140, white);
     }
